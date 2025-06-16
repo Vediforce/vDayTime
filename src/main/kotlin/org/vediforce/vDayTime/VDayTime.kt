@@ -76,11 +76,6 @@ class VDayTime : JavaPlugin(), CommandExecutor {
     }
 
     private fun startScheduler() {
-        // Disable vanilla daylight cycle for all worlds
-        server.worlds.forEach { world ->
-            world.setGameRuleValue("doDaylightCycle", "false")
-        }
-
         // Calculate how many game ticks to add each server tick for day and night
         val dayTickIncrement = 12000.0 / (dayDurationMinutes * 60 * 20)
         val nightTickIncrement = 12000.0 / (nightDurationMinutes * 60 * 20)
@@ -88,23 +83,33 @@ class VDayTime : JavaPlugin(), CommandExecutor {
         timeTask = object : BukkitRunnable() {
             override fun run() {
                 server.worlds.forEach { world ->
-                    val currentTime = world.time
-                    val baseIncrement = if (currentTime in 0L..11999L) {
-                        dayTickIncrement
-                    } else {
-                        nightTickIncrement
+                    // This plugin only modifies worlds where the vanilla daylight cycle is enabled.
+                    // This ensures compatibility with other plugins that freeze time by setting this gamerule to false.
+                    if (world.getGameRuleValue("doDaylightCycle")?.toBoolean() == true) {
+                        val currentTime = world.time
+
+                        // Calculate the desired tick increment based on the plugin's config
+                        val desiredIncrement = if (currentTime in 0L..11999L) {
+                            dayTickIncrement
+                        } else {
+                            nightTickIncrement
+                        }
+
+                        // The vanilla server adds 1 tick when doDaylightCycle is true.
+                        // We need to add the difference to match our desired speed.
+                        val adjustmentIncrement = desiredIncrement - 1.0
+
+                        // Use an accumulator to handle fractional increments smoothly
+                        val accumulator = timeAccumulators.getOrPut(world) { 0.0 } + adjustmentIncrement
+                        val ticksToAdjust = accumulator.toLong()
+
+                        if (ticksToAdjust != 0L) {
+                            world.fullTime += ticksToAdjust
+                        }
+
+                        // Store the remainder for the next tick
+                        timeAccumulators[world] = accumulator - ticksToAdjust
                     }
-
-                    // Get or initialize the accumulator and add the increment
-                    val accumulator = timeAccumulators.getOrPut(world) { 0.0 } + baseIncrement
-                    val ticksToAdd = accumulator.toLong()
-
-                    if (ticksToAdd > 0) {
-                        world.fullTime += ticksToAdd
-                    }
-
-                    // Keep the remainder for the next tick
-                    timeAccumulators[world] = accumulator - ticksToAdd
                 }
             }
         }.runTaskTimer(this, 0L, 1L) // Run the task every single tick for smooth transition
