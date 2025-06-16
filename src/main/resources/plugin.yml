@@ -1,0 +1,15 @@
+name: vDayTime
+version: 1.1
+main: org.vediforce.vDayTime.VDayTime
+api-version: '1.20'
+author: vDayTime
+description: Allows customizing day and night duration.
+commands:
+  vdaytimereload:
+    description: Reloads vDayTime plugin configuration.
+    usage: /vdaytimereload
+    permission: vdaytime.reload
+permissions:
+  vdaytime.reload:
+    description: Allows reloading the vDayTime config.
+    default: op

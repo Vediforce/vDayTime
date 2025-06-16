@@ -1,0 +1,9 @@
+# vDayTime plugin configuration
+
+# Duration of the day in real-time minutes.
+# Default: 10
+day-duration-minutes: 10
+
+# Duration of the night in real-time minutes.
+# Default: 10
+night-duration-minutes: 10 
